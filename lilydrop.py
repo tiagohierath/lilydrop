@@ -12,14 +12,14 @@ def state(): return json.loads(S.read_text() or '{}') if S.exists() else {}
 def save(x):
  S.parent.mkdir(parents=True,exist_ok=True); t=S.with_suffix('.tmp'); t.write_text(json.dumps(x)); t.replace(S)
 def main():
- p=argparse.ArgumentParser(); q=p.add_subparsers(dest='c',required=True); a=q.add_parser('publish'); a.add_argument('file'); a.add_argument('--days',type=int,default=7); a.add_argument('--slug',help='short public alias, for example vexian2026'); b=q.add_parser('revoke'); b.add_argument('token'); q.add_parser('serve'); x=p.parse_args()
+ p=argparse.ArgumentParser(); q=p.add_subparsers(dest='c',required=True); a=q.add_parser('publish'); a.add_argument('file'); a.add_argument('--days',type=int,default=7); a.add_argument('--slug',help='short public alias, for example vexian2026'); a.add_argument('--base-url',default='https://files.navylily.tv'); b=q.add_parser('revoke'); b.add_argument('token'); q.add_parser('serve'); x=p.parse_args()
  if x.c=='publish':
    d=state(); t=secrets.token_urlsafe(32); record={'file':str(Path(x.file).resolve()),'expires':time.time()+x.days*86400};
    if x.slug:
     if not x.slug.replace('-', '').replace('_', '').isalnum(): p.error('--slug must contain only letters, numbers, hyphens, or underscores')
     if any(v.get('slug') == x.slug for v in d.values()): p.error(f'slug already exists: {x.slug}')
     record['slug']=x.slug
-   d[t]=record; save(d); print(x.slug or t)
+   d[t]=record; save(d); print(f'{x.base_url.rstrip("/")}/{"d/" + x.slug if x.slug else "s/" + t}')
  elif x.c=='revoke': d=state(); d.pop(x.token,None); save(d)
  else:
   class H(BaseHTTPRequestHandler):
@@ -47,6 +47,11 @@ def main():
      body=body.replace(b'</title>', b'</title><link rel="icon" href="/lilydrop-folder-chrome-isometric.png">', 1)
      body=body.replace(b'<section class="welcome drop-card">', b'<section class="welcome drop-card"><img src="/lilydrop-folder-chrome-isometric.png" alt="" style="display:block;width:min(320px,70vw);margin:0 auto 24px">')
      body=body.replace(b'SophieDrop', b'lilydrop').replace(b'sophiedrop-folder-chrome-isometric.png', b'lilydrop-folder-chrome-isometric.png')
+     command=f"curl -fL -C - '{urlparse(self.path).scheme or 'https'}://{self.headers.get('Host','files.navylily.tv')}{urlparse(self.path).path}/{f.name}' -o '{f.name}'"
+     body=body.replace(b'<div class="drop-actions">', b'<p class="agent-command"><code>'+html.escape(command).encode()+b'</code></p><div class="drop-actions">')
+     body=body.replace(b'.drop-card{', b'.drop-card{display:flex;flex-direction:column;}.drop-card>img{order:-2}')
+     body=body.replace(b'.drop-actions{', b'.drop-actions{order:-1;')
+     body=body.replace(b'width:min(320px,70vw)', b'width:min(180px,42vw)')
      self.send_response(200); self.send_header('Content-Type','text/html; charset=utf-8'); self.send_header('Content-Length',str(len(body))); self.send_header('Cache-Control','private, no-store'); self.end_headers();
      if self.command != 'HEAD': self.wfile.write(body)
      return
