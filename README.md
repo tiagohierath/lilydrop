@@ -1,5 +1,7 @@
 # lilydrop
 
+Just a tool i built to share files 
+
 Create a seven-day share with `./lilydrop.py publish assets.tar.gz`. Revoke it with `./lilydrop.py revoke TOKEN`. Run `./lilydrop.py serve` behind an HTTPS reverse proxy on port `8787`.
 
 On the existing Navylily host, install `auth/deploy/lilydrop.service`, add `files.navylily.tv` to the Cloudflare tunnel and DNS, then start the service. Public links use `https://files.navylily.tv/s/TOKEN`.
