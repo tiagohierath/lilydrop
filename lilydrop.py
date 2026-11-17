@@ -530,9 +530,38 @@ def serve_command(args: argparse.Namespace) -> None:
     ThreadingHTTPServer((args.host, args.port), Handler).serve_forever()
 
 
+def list_command(args: argparse.Namespace) -> None:
+    state = load_state()
+    rows = []
+    for token, share in state["shares"].items():
+        status = share_status(share)
+        if not args.all and status != "active":
+            continue
+        delivery = state["deliveries"].get(share.get("delivery_id"))
+        if delivery:
+            project = delivery["project_name"]
+            label = delivery_label(delivery)
+            route = f"/{quote(delivery['project_id'], safe='')}/{delivery['number']}/{quote(token, safe='')}"
+        else:
+            project = share.get("slug") or share.get("legacy_name", "Unknown delivery")
+            label = "Legacy delivery"
+            route = f"/s/{quote(token, safe='')}"
+        rows.append((share.get("expires_at", 0), project, label, status, route))
+    if not rows:
+        print("No shares." if args.all else "No active links.")
+        return
+    for expires, project, label, status, route in sorted(rows):
+        print(f"{project} · {label} · {status}")
+        print(f"  Expires: {utc_label(expires)}")
+        print(f"  {args.base_url.rstrip('/')}{route}")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="publish expiring project deliveries")
     commands = parser.add_subparsers(dest="command", required=True)
+    listing = commands.add_parser("list", help="show active share links and expiry times")
+    listing.add_argument("--all", action="store_true", help="include expired and revoked links")
+    listing.add_argument("--base-url", default="https://files.navylily.tv")
     publish = commands.add_parser("publish", help="package and publish a new delivery")
     publish.add_argument("path")
     publish.add_argument("--project", required=True)
@@ -565,7 +594,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
-        if args.command == "publish":
+        if args.command == "list":
+            list_command(args)
+        elif args.command == "publish":
             publish_command(args)
         elif args.command == "reshare":
             reshare_command(args)

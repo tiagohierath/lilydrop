@@ -71,6 +71,40 @@ class LilydropTest(unittest.TestCase):
         self.assertIn("/alvorada/1/", second)
         self.assertNotEqual(first, second)
 
+    def test_list_filters_status_and_preserves_ledger(self):
+        state = lilydrop.empty_state()
+        state["deliveries"]["example:1"] = {
+            "project_id": "example", "project_name": "Example", "number": 1,
+        }
+        for token, changes in (
+            ("active-token", {}),
+            ("expired-token", {"expires_at": 1}),
+            ("revoked-token", {"revoked_at": 1}),
+        ):
+            state["shares"][token] = {
+                "delivery_id": "example:1", "expires_at": time.time() + 3600,
+                **changes,
+            }
+        state["shares"]["legacy-token"] = {
+            "legacy_name": "archive.zip", "expires_at": time.time() + 3600,
+        }
+        lilydrop.save_state(state)
+        before = lilydrop.state_path().read_bytes()
+        output = "\n".join(self.run_command("list"))
+        self.assertIn("/example/1/active-token", output)
+        self.assertIn("/s/legacy-token", output)
+        self.assertIn("Expires:", output)
+        self.assertNotIn("expired-token", output)
+        self.assertNotIn("revoked-token", output)
+        output = "\n".join(self.run_command("list", "--all", "--base-url", "https://example.test/"))
+        self.assertIn("https://example.test/example/1/expired-token", output)
+        self.assertIn("revoked-token", output)
+        self.assertEqual(before, lilydrop.state_path().read_bytes())
+
+    def test_list_empty(self):
+        self.assertEqual(self.run_command("list"), ["No active links."])
+        self.assertEqual(self.run_command("list", "--all"), ["No shares."])
+
     def test_broad_roots_are_rejected(self):
         workspace = Path(__file__).resolve().parents[2]
         project_root = workspace / "alvorada2026"

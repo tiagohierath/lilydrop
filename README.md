@@ -2,6 +2,10 @@
 
 Just a tool i built to share files 
 
+Show active links with `./lilydrop.py list`. Each entry includes the project,
+delivery, URL, and expiry in UTC. Use `./lilydrop.py list --all` to include
+expired and revoked links. Listing is read-only and does not extend expiry.
+
 Publish a numbered delivery with `./lilydrop.py publish DELIVERY_FOLDER --project PROJECT --delivery 1 --allow-root PROJECT_ROOT`. Revoke it with `./lilydrop.py revoke TOKEN`. Run `./lilydrop.py serve` behind an HTTPS reverse proxy on port `8787`.
 
 The local production ledger remains at `../navylily-tools/.state/lilydrop/shares.json`.
