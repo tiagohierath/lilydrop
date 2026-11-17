@@ -2,7 +2,19 @@
 
 Just a tool i built to share files 
 
-Create a seven-day share with `./lilydrop.py publish assets.tar.gz`. Revoke it with `./lilydrop.py revoke TOKEN`. Run `./lilydrop.py serve` behind an HTTPS reverse proxy on port `8787`.
+Publish a numbered delivery with `./lilydrop.py publish DELIVERY_FOLDER --project PROJECT --delivery 1 --allow-root PROJECT_ROOT`. Revoke it with `./lilydrop.py revoke TOKEN`. Run `./lilydrop.py serve` behind an HTTPS reverse proxy on port `8787`.
+
+The local production ledger remains at `../navylily-tools/.state/lilydrop/shares.json`.
+The CLI and server use this same default; do not move or replace the ledger during updates.
+Existing tokens and archive paths remain valid until their original expiry.
+Client links use `/PROJECT/NUMBER/TOKEN`; legacy `/s/TOKEN` links are supported.
+
+The production user unit is `lilydrop.service`. Its `deploy/override.conf` drop-in
+selects this checkout and explicitly pins the existing ledger. Run
+`systemctl --user restart lilydrop.service` after updating.
+Do not run preview servers on production port 8787; use `serve --port 8788`.
+
+Run tests with `python3 -m unittest discover -s tests` from this directory.
 
 On the existing Navylily host, install `auth/deploy/lilydrop.service`, add `files.navylily.tv` to the Cloudflare tunnel and DNS, then start the service. Public links use `https://files.navylily.tv/s/TOKEN`.
 
